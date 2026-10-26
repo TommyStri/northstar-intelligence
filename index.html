@@ -1,0 +1,302 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>Northstar Intelligence</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#121b2e;--line:#2a3852;--text:#f4f7ff;--muted:#aab6cb;--blue:#9bbcff}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top right,#1b3158,transparent 45%),var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,sans-serif}
+header{padding:18px;border-bottom:1px solid var(--line);background:#0b1020}
+main{max-width:850px;margin:auto;padding:24px 16px}
+.brand{font-weight:850;letter-spacing:.07em}.brand span,h1 span{color:var(--blue)}
+h1{font-size:clamp(32px,8vw,48px);line-height:1.1;margin:28px 0 12px}
+h2{font-size:20px;margin:6px 0}
+p{color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin:16px 0}
+label{display:block;font-size:14px;font-weight:700;margin:15px 0 7px}
+input,select,textarea{width:100%;padding:13px;border-radius:10px;border:1px solid #3a4a66;background:#0e1728;color:var(--text);font:inherit}
+textarea{min-height:110px;resize:vertical}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px;cursor:pointer}
+.primary{width:100%;margin-top:16px;background:var(--blue);color:#101a2d}
+.secondary{background:#24344f;border:1px solid #405473;color:white}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.actions button{flex:1}
+.note{font-size:12px;line-height:1.6}
+.report{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:14px}
+.hidden{display:none!important}
+.saved{border-top:1px solid var(--line);padding:12px 0}
+.saved button{margin:5px 5px 0 0}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+@media(min-width:700px){.columns{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:start}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">NORTHSTAR <span>INTELLIGENCE</span></div>
+  <div class="note">Research with direction. Decisions with evidence.</div>
+</header>
+<main>
+  <h1>Find the signal.<br><span>See the opportunity.</span></h1>
+  <p>Build structured business research briefs, organise your questions and save your work.</p>
+
+  <div class="columns">
+    <section class="panel">
+      <h2>Research desk</h2>
+      <p>What would you like to investigate?</p>
+      <form id="researchForm">
+        <label for="kind">Research type</label>
+        <select id="kind">
+          <option>Business idea analysis</option>
+          <option>Market research</option>
+          <option>Competitor analysis</option>
+          <option>Customer problem research</option>
+          <option>Opportunity discovery</option>
+          <option>Business strategy</option>
+        </select>
+
+        <label for="market">Market or industry</label>
+        <input id="market" maxlength="120" placeholder="e.g. online education">
+
+        <label for="question">Your research question</label>
+        <textarea id="question" maxlength="1200" required placeholder="What do you want to understand?"></textarea>
+
+        <label for="depth">Research depth</label>
+        <select id="depth">
+          <option>Quick overview</option>
+          <option>Detailed analysis</option>
+          <option>Strategic deep dive</option>
+        </select>
+
+        <button class="primary" type="submit">Build research outline</button>
+      </form>
+      <p class="note">This version generates a research plan locally. It does not yet perform live web searches or use AI.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Saved research</h2>
+      <p class="note">Reports are stored in this browser on this device.</p>
+      <div id="savedList" aria-live="polite">No saved reports yet.</div>
+      <button id="clearSaved" class="secondary" type="button" style="width:100%;margin-top:12px">Clear saved reports</button>
+    </section>
+  </div>
+
+  <section id="reportPanel" class="panel hidden" aria-live="polite">
+    <h2 id="reportTitle">Research outline</h2>
+    <p class="note">PLANNING OUTLINE — NOT VERIFIED MARKET FINDINGS</p>
+    <div id="reportText" class="report"></div>
+    <div class="actions">
+      <button id="copyReport" class="secondary" type="button">Copy report</button>
+      <button id="saveReport" class="primary" type="button" style="margin:0">Save report</button>
+    </div>
+    <p id="message" class="note" role="status"></p>
+  </section>
+</main>
+<footer>Northstar Intelligence · Early prototype</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = "northstar-reports-v1";
+  let currentTitle = "";
+  let currentReport = "";
+
+  function readSaved(){
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      return Array.isArray(data) ? data.filter(item =>
+        item && typeof item.id === "string" &&
+        typeof item.title === "string" &&
+        typeof item.text === "string"
+      ) : [];
+    } catch(error) {
+      return [];
+    }
+  }
+
+  function writeSaved(items){
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      return true;
+    } catch(error) {
+      return false;
+    }
+  }
+
+  function buildReport(type, market, question, depth){
+    return [
+      "NORTHSTAR INTELLIGENCE — RESEARCH BRIEF",
+      "",
+      "RESEARCH TYPE",
+      type,
+      "",
+      "RESEARCH QUESTION",
+      question,
+      "",
+      "MARKET OR INDUSTRY",
+      market || "Not specified",
+      "",
+      "1. DECISION TO MAKE",
+      "Define the decision this research should support, the intended customer and what success means.",
+      "",
+      "2. MARKET AND CUSTOMERS",
+      "- Find credible, dated evidence about market size and growth.",
+      "- Identify customer groups, needs and existing alternatives.",
+      "- Investigate trends, geography and relevant regulations.",
+      "",
+      "3. COMPETITOR ANALYSIS",
+      "- Identify direct competitors and alternative solutions.",
+      "- Compare pricing, customer groups, strengths and weaknesses.",
+      "- Look for unmet needs and opportunities to differentiate.",
+      "",
+      "4. OPPORTUNITY HYPOTHESES",
+      "- State the opportunity as a hypothesis, not a proven fact.",
+      "- Explain why customers might choose a new solution.",
+      "- Design a small, affordable test before investing heavily.",
+      "",
+      "5. EVIDENCE AND RISKS",
+      "- Record source links, dates and the claims they support.",
+      "- Separate verified facts, estimates and assumptions.",
+      "- Investigate costs, regulation and reasons the idea could fail.",
+      "",
+      "6. NEXT STEPS",
+      "1. Gather reliable industry, government and company sources.",
+      "2. Speak with potential customers.",
+      "3. Test the riskiest assumption.",
+      "4. Review the evidence before making a decision.",
+      "",
+      "REQUESTED DEPTH",
+      depth,
+      "",
+      "IMPORTANT LIMITATION",
+      "This outline was generated in your browser. No live web search or AI model was used. The suggestions above are research prompts, not verified market findings."
+    ].join("\n");
+  }
+
+  function showReport(title, text){
+    currentTitle = title;
+    currentReport = text;
+    $("reportTitle").textContent = title;
+    $("reportText").textContent = text;
+    $("message").textContent = "";
+    $("reportPanel").classList.remove("hidden");
+    $("reportPanel").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  $("researchForm").addEventListener("submit", function(event){
+    event.preventDefault();
+    const question = $("question").value.trim();
+    if(!question){
+      $("question").focus();
+      return;
+    }
+    const title = $("kind").value;
+    const report = buildReport(
+      title,
+      $("market").value.trim(),
+      question,
+      $("depth").value
+    );
+    showReport(title, report);
+  });
+
+  $("copyReport").addEventListener("click", async function(){
+    if(!currentReport) return;
+    try {
+      if(!navigator.clipboard || !navigator.clipboard.writeText){
+        throw new Error("Clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(currentReport);
+      $("message").textContent = "Report copied.";
+    } catch(error) {
+      $("message").textContent =
+        "Automatic copying is unavailable. Press and hold the report text to select and copy it.";
+    }
+  });
+
+  function renderSaved(){
+    const root = $("savedList");
+    root.replaceChildren();
+    const items = readSaved();
+
+    if(items.length === 0){
+      root.textContent = "No saved reports yet.";
+      return;
+    }
+
+    items.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "saved";
+
+      const title = document.createElement("strong");
+      title.textContent = item.title;
+
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "secondary";
+      open.textContent = "Open";
+      open.addEventListener("click", () => showReport(item.title, item.text));
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "secondary";
+      remove.textContent = "Delete";
+      remove.addEventListener("click", () => {
+        const remaining = readSaved().filter(saved => saved.id !== item.id);
+        if(writeSaved(remaining)){
+          renderSaved();
+        } else {
+          window.alert("Could not update saved reports in this browser.");
+        }
+      });
+
+      row.append(title, document.createElement("br"), open, remove);
+      root.appendChild(row);
+    });
+  }
+
+  $("saveReport").addEventListener("click", function(){
+    if(!currentReport) return;
+
+    const items = readSaved();
+    items.unshift({
+      id: String(Date.now()) + "-" + Math.random().toString(36).slice(2,8),
+      title: currentTitle,
+      text: currentReport
+    });
+
+    if(!writeSaved(items.slice(0,30))){
+      $("message").textContent =
+        "Browser storage is unavailable. Copy the report to keep it.";
+      return;
+    }
+
+    $("message").textContent = "Report saved on this device.";
+    renderSaved();
+  });
+
+  $("clearSaved").addEventListener("click", function(){
+    if(readSaved().length === 0){
+      window.alert("There are no saved reports.");
+      return;
+    }
+
+    if(window.confirm("Delete all saved reports from this browser?")){
+      if(writeSaved([])){
+        renderSaved();
+      } else {
+        window.alert("Could not clear saved reports.");
+      }
+    }
+  });
+
+  renderSaved();
+})();
+</script>
+</body>
+</html>
